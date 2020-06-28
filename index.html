@@ -16,7 +16,7 @@
         $(function () {
             var myUrl = 'https://data.etflogic.io/test?apikey=263752e3-765e-4dab-aa89-ab3d6a49d7dc&function=premium-discount&date_gteq=2020.01.02&ticker=BIBL&format=json&fields=ticker,asof_date,prem_discount_ratio';
             var proxy = 'https://cors-anywhere.herokuapp.com/';
-            
+
             $('#plotbody').hide();
             $('#loading').show();
             $.ajax({
@@ -41,7 +41,7 @@
                 }));
 
                 XY = [0, 1, 2];
-                plotData = getSortData(totalData, '', XY, header=false);
+                plotData = getSortData(totalData, '', XY, header = false);
 
                 quarters = [];
                 plotData.forEach(function (plot) {
@@ -71,7 +71,7 @@
                         name: quarter,
                         id: quarter,
                         data: plotData.filter(function (plot) {
-                            if(quarter.includes("1Y")) return plot[4] == quarter;
+                            if (quarter.includes("1Y")) return plot[4] == quarter;
                             return plot[3] == quarter;
                         }),
                         type: 'spline',
@@ -142,7 +142,7 @@
                 serie = chart.get(quarter);
 
                 exportData = plotData.filter(function (val) {
-                    if(quarter.includes("1Y"))
+                    if (quarter.includes("1Y"))
                         return val[4] == quarter;
                     return val[3] == quarter;
                 }).map(function (val) {
@@ -152,6 +152,8 @@
                 })
 
                 exportData.unshift(exportDataHeader);
+                latestAsofDate = exportData[exportData.length - 1][0];
+                $('#latestAsOfDate').text(latestAsofDate);
                 serie.show();
             }
 
@@ -188,7 +190,8 @@
         margin-left: auto; 
         margin-right: auto;
         border: 2px solid grey;
-    ">
+        ">
+        <div id='latestAsOfDate' style="text-align: end; margin-bottom: 30px; font-weight: 700;"></div>
         <div style="display: flex; justify-content: space-between">
             <span>Hover over the chart points for details</span><span id='quarters'></span>
         </div>
