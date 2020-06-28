@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+
+<head>
+    <title>FUND PRICE</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://code.highcharts.com/stock/highstock.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+    <!-- <link href="includes/css/style.css" rel="stylesheet"> -->
+</head>
+
+<body>
+    <script type="text/javascript">
+        $(function () {
+            var myUrl = 'https://data.etflogic.io/test?apikey=263752e3-765e-4dab-aa89-ab3d6a49d7dc&function=premium-discount&date_gteq=2020.01.02&ticker=BIBL&format=json&fields=ticker,asof_date,prem_discount_ratio';
+            var proxy = 'https://cors-anywhere.herokuapp.com/';
+            
+            $('#plotbody').hide();
+            $('#loading').show();
+            $.ajax({
+                type: "GET",
+                headers: {
+                    "x-requested-with": "xhr"
+                },
+                url: proxy + myUrl,
+                dataType: "json",
+                success: function (response) {
+                    drawChart(response);
+                    $('#loading').hide();
+                    $('#plotbody').show();
+                }
+            });
+
+            function drawChart(data) {
+                totalData = ObjectToArray(data.map(function (d) {
+                    d.asof_date = Date.parse(d.asof_date);
+                    d.prem_discount_ratio = number_with_decimals(parseFloat(d.prem_discount_ratio) * 100, 4);
+                    return ObjectToArray(d);
+                }));
+
+                XY = [0, 1, 2];
+                plotData = getSortData(totalData, '', XY, header=false);
+
+                quarters = [];
+                plotData.forEach(function (plot) {
+                    quarter = getQuarter(plot[0]);
+                    year = getYear(plot[0]);
+
+                    plot.push(quarter);
+                    plot.push(year);
+                    if (quarters.includes(quarter) == false) {
+                        quarters.push(quarter);
+                    }
+                    if (quarters.includes(year) == false) {
+                        quarters.push(year);
+                    }
+                });
+
+                sortQuarters(quarters);
+
+                exportData = [];
+                exportDataHeader = ['As Of Date', 'Prem Discount Ratio', 'Ticker', 'Quarter'];
+                sortFieldIdx = 0;
+                fieldIdxs = [0, 1, 2];
+                seriesData = [];
+
+                quarters.forEach(function (quarter) {
+                    seriesData.push({
+                        name: quarter,
+                        id: quarter,
+                        data: plotData.filter(function (plot) {
+                            if(quarter.includes("1Y")) return plot[4] == quarter;
+                            return plot[3] == quarter;
+                        }),
+                        type: 'spline',
+                    });
+                });
+
+                $('#container').highcharts({
+                    title: {
+                        text: '',
+                        align: 'left'
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    xAxis: {
+                        type: 'datetime',
+                    },
+                    series: seriesData,
+
+                    exporting: {
+                        csv: {
+                            dateFormat: '%Y-%m-%d'
+                        }
+                    },
+
+                    tooltip: {
+                        formatter: function () {
+                            var s = '<b>' + new Date(this.x).toDateString(); + '</b>',
+                                X = this.x
+                            ticker = totalData.filter(function (val) { return val[0] === X })[0][2]
+                            s += '<br/>' + ticker + ' : ' + this.y + '%';
+                            return s;
+                        },
+                        shared: true,
+                        backgroundColor: '#ff5400',
+                        style: {
+                            color: 'white',
+                        }
+                    },
+                    colors: ['#ff5400']
+
+                }, function (chart) {
+                    var $quarterLegend = $('#quarters').append('<select id="quarterSelect"></select>').find('select'),
+                        $option,
+                        serie;
+
+                    $.each(quarters, function (i, quarter) {
+                        $quarterLegend.append('<option ' + (i == 0 ? 'selected' : '') + '>' + quarter + '</option>');
+                    });
+                    updateChart(chart, quarters[0]);
+                    $quarterLegend.change(function () {
+                        $quarter = $(this).val();
+                        updateChart(chart, $quarter);
+                    });
+                });
+
+                // $('#download').click(function () {
+                //     var chart = $('#container').highcharts();
+                //     chart.downloadXLS()
+                // });
+
+            }
+            function updateChart(chart, quarter) {
+                for (var i = 0; i < quarters.length; i++) {
+                    option = chart.get(quarters[i]);
+                    option.hide();
+                }
+                serie = chart.get(quarter);
+
+                exportData = plotData.filter(function (val) {
+                    if(quarter.includes("1Y"))
+                        return val[4] == quarter;
+                    return val[3] == quarter;
+                }).map(function (val) {
+                    exportVal = Object.assign([], val);
+                    exportVal[0] = formatDate(new Date(exportVal[0]))
+                    return exportVal;
+                })
+
+                exportData.unshift(exportDataHeader);
+                serie.show();
+            }
+
+            function getQuarter(d) {
+                d = new Date(d);
+                var m = Math.floor(d.getMonth() / 3) + 1;
+                var y = d.getFullYear();
+                return y + " Q" + m;
+            }
+
+            function getYear(d) {
+                d = new Date(d);
+                var y = d.getFullYear();
+                return y + " 1Y";
+            }
+
+            function sortQuarters(quarters) {
+                sortQuarters = quarters.sort().reverse();
+                return sortQuarters;
+            }
+
+            $('#download').on('click', function () {
+                download(exportData, sortFieldIdx, fieldIdxs);
+                exportData = [];
+            })
+        });
+    </script>
+    <script src="js/main.js"></script>
+    <div id='loading'> Loading ... </div>
+    <div id='plotbody' style="
+        height: auto;
+        padding: 20px; 
+        width: 80%;
+        margin-left: auto; 
+        margin-right: auto;
+        border: 2px solid grey;
+    ">
+        <div style="display: flex; justify-content: space-between">
+            <span>Hover over the chart points for details</span><span id='quarters'></span>
+        </div>
+        <div id="container" style="
+            padding: 0;
+            ">
+        </div>
+        <button id='download'>Export to CSV</button>
+    </div>
+
+</body>
+
+
+</html>
