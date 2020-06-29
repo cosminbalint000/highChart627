@@ -101,7 +101,6 @@
                         formatter: function () {
                             var options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
                             options.timeZone = 'UTC';
-                            options.timeZoneName = 'short';
 
                             var s = '<b>' + new Intl.DateTimeFormat('en-US', options).format(new Date(this.x)) + '</b>',
                             X = this.x
