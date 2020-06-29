@@ -99,8 +99,12 @@
 
                     tooltip: {
                         formatter: function () {
-                            var s = '<b>' + new Date(this.x).toDateString(); + '</b>',
-                                X = this.x
+                            var options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+                            options.timeZone = 'UTC';
+                            options.timeZoneName = 'short';
+
+                            var s = '<b>' + new Intl.DateTimeFormat('en-US', options).format(new Date(this.x)) + '</b>',
+                            X = this.x
                             ticker = totalData.filter(function (val) { return val[0] === X })[0][2]
                             s += '<br/>' + ticker + ' : ' + this.y + '%';
                             return s;
